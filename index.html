@@ -1,0 +1,765 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>3D Interactive Portfolio — Sahil</title>
+  <meta name="description" content="Interactive 3D portfolio showcasing projects, skills and contact info. Built with HTML, CSS, JS, and Three.js" />
+
+  <!-- Three.js from CDN -->
+  <script src="https://unpkg.com/three@0.158.0/build/three.min.js" defer></script>
+
+  <style>
+    /* --- Base / Reset --- */
+    :root{
+      --bg:#0f1724;
+      --card:#0b1220;
+      --accent:#7c3aed; /* purple */
+      --muted:#94a3b8;
+      --glass: rgba(255,255,255,0.04);
+      --glass-2: rgba(255,255,255,0.02);
+      --radius: 14px;
+      --max-width:1200px;
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background: linear-gradient(180deg,var(--bg) 0%, #071029 100%);
+      color:#e6eef8;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      line-height:1.45;
+      font-size:16px;
+    }
+    a{color:inherit; text-decoration:none}
+    img{max-width:100%; display:block}
+
+    /* --- Layout --- */
+    .container{
+      width: min(96%, var(--max-width));
+      margin: 0 auto;
+    }
+
+    header{
+      position:sticky;
+      top:0;
+      z-index:40;
+      backdrop-filter: blur(6px);
+      background: linear-gradient(90deg, rgba(11,17,32,0.6), rgba(11,17,32,0.35));
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .nav{
+      display:flex;
+      align-items:center;
+      gap:1rem;
+      justify-content:space-between;
+      padding: 12px 8px;
+    }
+    .brand{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      font-weight:600;
+      letter-spacing:0.2px;
+    }
+    .brand .logo{
+      width:40px; height:40px;
+      display:inline-grid; place-items:center;
+      background:linear-gradient(135deg,#6d28d9,#a78bfa);
+      border-radius:10px;
+      box-shadow: 0 6px 18px rgba(124,58,237,0.18);
+      font-weight:700;
+    }
+    nav ul{list-style:none; display:flex; gap:10px; margin:0; padding:0;}
+    nav a{
+      padding:8px 10px;
+      border-radius:8px;
+      transition: all .22s ease;
+      color:var(--muted);
+      font-weight:600;
+      font-size:0.95rem;
+    }
+    nav a:hover, nav a:focus{
+      color: #fff;
+      background: var(--glass);
+      outline:none;
+      transform: translateY(-2px);
+    }
+    .cta{
+      padding:10px 14px;
+      background: linear-gradient(90deg,var(--accent), #a78bfa);
+      border-radius:12px;
+      color:white;
+      font-weight:700;
+      box-shadow: 0 8px 30px rgba(124,58,237,0.18);
+      transition: transform .16s ease;
+    }
+    .cta:active{transform:translateY(1px)}
+
+    /* --- Hero with 3D canvas --- */
+    .hero{
+      display:grid;
+      grid-template-columns: 1fr 420px;
+      gap:32px;
+      align-items:center;
+      padding:48px 0;
+    }
+    @media (max-width:980px){
+      .hero{grid-template-columns:1fr; grid-auto-rows:auto; padding:28px 0}
+    }
+    .hero-left{padding-right:8px}
+    h1{
+      font-size: clamp(1.4rem, 3.6vw, 2.4rem);
+      margin:0 0 10px;
+      line-height:1.05;
+    }
+    p.lead{
+      color:var(--muted);
+      margin:0 0 18px;
+      max-width:60ch;
+    }
+    .hero-actions{display:flex; gap:12px; align-items:center; margin-top:18px}
+
+    /* Canvas card */
+    .canvas-card{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius: var(--radius);
+      padding:14px;
+      box-shadow: 0 12px 40px rgba(2,6,23,0.6);
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      min-height:360px;
+      justify-content:center;
+      align-items:center;
+    }
+    #three-canvas{
+      width:100%;
+      height:360px;
+      display:block;
+      border-radius: 10px;
+      background: linear-gradient(180deg, rgba(11,17,32,0.6), rgba(7,10,25,0.6));
+    }
+    .canvas-controls{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      margin-top:6px;
+    }
+    .btn{
+      padding:8px 10px;
+      border-radius:10px;
+      background:var(--glass);
+      border:1px solid rgba(255,255,255,0.03);
+      cursor:pointer;
+      font-weight:600;
+    }
+    .btn:focus{outline:2px solid rgba(124,58,237,0.22)}
+
+    /* --- Sections --- */
+    main{padding-bottom:60px}
+    section{padding:28px 0}
+    .section-title{display:flex; justify-content:space-between; align-items:end; gap:12px; margin-bottom:14px}
+    .section-title h2{margin:0; font-size:1.15rem}
+    .subtitle{color:var(--muted); font-size:0.95rem}
+
+    /* Projects grid */
+    .projects-grid{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:18px;
+    }
+    @media (max-width:980px){ .projects-grid{grid-template-columns: repeat(2, 1fr)} }
+    @media (max-width:640px){ .projects-grid{grid-template-columns: 1fr} }
+
+    .card{
+      background: linear-gradient(180deg,var(--card), var(--glass-2));
+      border-radius:12px;
+      padding:12px;
+      transition: transform .28s cubic-bezier(.16,.8,.24,1), box-shadow .28s, border-color .22s;
+      border: 1px solid rgba(255,255,255,0.02);
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-height:140px;
+    }
+    /* Hover effect: scale, lift, accent glow */
+    .card:hover, .card:focus-within{
+      transform: translateY(-8px) scale(1.01);
+      box-shadow: 0 18px 50px rgba(2,6,23,0.6), 0 6px 18px rgba(124,58,237,0.08);
+      border-color: rgba(124,58,237,0.18);
+    }
+    .card .thumb{
+      height:120px;
+      border-radius:10px;
+      overflow:hidden;
+      display:block;
+      background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .card .meta{display:flex; justify-content:space-between; align-items:center; gap:8px}
+    .card h3{margin:0; font-size:1.02rem}
+    .tags{display:flex; gap:6px; flex-wrap:wrap}
+    .tag{
+      font-size:0.8rem;
+      padding:6px 8px;
+      border-radius:8px;
+      background:rgba(255,255,255,0.02);
+      color:var(--muted);
+      border:1px solid rgba(255,255,255,0.01);
+    }
+
+    /* Skills */
+    .skills{
+      display:grid;
+      grid-template-columns: repeat(4,1fr);
+      gap:12px;
+    }
+    @media (max-width:980px){ .skills{grid-template-columns: repeat(2,1fr)} }
+    @media (max-width:640px){ .skills{grid-template-columns: 1fr} }
+
+    .skill{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      padding:12px; border-radius:10px; text-align:center;
+      transition: transform .18s ease;
+    }
+    .skill:hover{ transform: translateY(-6px) }
+
+    /* Contact */
+    .contact-card{display:grid; grid-template-columns:1fr 320px; gap:18px}
+    @media (max-width:900px){ .contact-card{grid-template-columns:1fr} }
+    .contact-form input, .contact-form textarea{
+      width:100%; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.03);
+      background: rgba(255,255,255,0.02); color:inherit; resize:vertical;
+    }
+    .contact-form button{margin-top:8px; padding:10px 12px; border-radius:10px; border:0; background:var(--accent); color:white; font-weight:700}
+
+    /* Modal for dynamic project details */
+    .modal{
+      position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:80;
+      background:linear-gradient(180deg, rgba(2,6,23,0.6), rgba(2,6,23,0.85));
+      padding:20px;
+    }
+    .modal.show{display:flex}
+    .modal-card{background: #071225; border-radius:12px; width:min(900px, 96%); max-height:86vh; overflow:auto; padding:18px; border:1px solid rgba(255,255,255,0.03)}
+    .modal-close{position:absolute; right:16px; top:16px; background:transparent; border:0; color:var(--muted); font-size:1.1rem}
+
+    /* Accessibility focus ring for keyboard users */
+    :focus{outline: 3px solid rgba(124,58,237,0.18); outline-offset:2px}
+
+    /* Micro-interactions / transitions */
+    .fade-in{animation:fadeIn .45s ease both}
+    @keyframes fadeIn{from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none}}
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="container nav" role="banner">
+      <div class="brand" aria-hidden="false">
+        <div class="logo" aria-hidden="true">R</div>
+        <div>
+          <div style="font-size:.95rem">Sahil</div>
+          <div style="font-size:.78rem; color:var(--muted)">Front-end • 3D • UX</div>
+        </div>
+      </div>
+
+      <nav aria-label="Primary navigation">
+        <ul>
+          <li><a href="#home" class="nav-link" data-scroll>Home</a></li>
+          <li><a href="#projects" class="nav-link" data-scroll>Projects</a></li>
+          <li><a href="#skills" class="nav-link" data-scroll>Skills</a></li>
+          <li><a href="#contact" class="nav-link" data-scroll>Contact</a></li>
+        </ul>
+      </nav>
+
+      <div>
+        <a class="cta" href="#contact" data-scroll>Hire me</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="home" class="hero" aria-label="Introduction">
+      <div class="hero-left">
+        <h1>Interactive 3D Portfolio — Creative, Fast, Accessible</h1>
+        <p class="lead">I build immersive, performant web experiences that blend 3D visuals with thoughtful UX. Drag the cube, explore projects, and enjoy smooth transitions across sections.</p>
+
+        <div class="hero-actions">
+          <button class="btn" id="viewProjectsBtn" aria-controls="projects">View Projects</button>
+          <a class="btn" href="#contact" data-scroll>Contact</a>
+        </div>
+
+        <div style="margin-top:22px; color:var(--muted); font-size:.92rem">
+          Tip: Drag the cube to rotate it. Use keyboard tab to navigate and Enter to open items.
+        </div>
+      </div>
+
+      <aside class="canvas-card" aria-label="3D preview">
+        <!-- 3D Canvas -->
+        <canvas id="three-canvas" role="img" aria-label="Interactive 3D cube showing a sample project"></canvas>
+
+        <div class="canvas-controls" role="group" aria-label="3D controls">
+          <button class="btn" id="autoRotateToggle" aria-pressed="true">Auto Rotate: On</button>
+          <button class="btn" id="resetBtn">Reset</button>
+        </div>
+      </aside>
+    </section>
+
+    <!-- Projects -->
+    <section id="projects" aria-labelledby="projects-title">
+      <div class="section-title">
+        <div>
+          <h2 id="projects-title">Projects</h2>
+          <div class="subtitle">Hand-picked projects demonstrating web & 3D skills.</div>
+        </div>
+        <div style="color:var(--muted)"><small id="projects-status">0 projects loaded</small></div>
+      </div>
+
+      <div id="projects-grid" class="projects-grid" aria-live="polite" aria-busy="false">
+        <!-- Cards will be loaded dynamically -->
+        <!-- Placeholder skeletons for better UX -->
+        <div class="card" aria-hidden="true"><div class="thumb" style="height:120px"></div><div class="meta"><h3 style="opacity:.4">Loading...</h3></div></div>
+        <div class="card" aria-hidden="true"><div class="thumb" style="height:120px"></div><div class="meta"><h3 style="opacity:.4">Loading...</h3></div></div>
+        <div class="card" aria-hidden="true"><div class="thumb" style="height:120px"></div><div class="meta"><h3 style="opacity:.4">Loading...</h3></div></div>
+      </div>
+    </section>
+
+    <!-- Skills -->
+    <section id="skills" aria-labelledby="skills-title">
+      <div class="section-title">
+        <div>
+          <h2 id="skills-title">Skills</h2>
+          <div class="subtitle">Tools and technologies I use frequently.</div>
+        </div>
+      </div>
+
+      <div class="skills">
+        <div class="skill card fade-in"><strong>HTML5</strong><div class="tag" style="margin-top:8px">Semantic markup</div></div>
+        <div class="skill card fade-in"><strong>CSS / Tailwind</strong><div class="tag" style="margin-top:8px">Responsive design</div></div>
+        <div class="skill card fade-in"><strong>JavaScript</strong><div class="tag" style="margin-top:8px">Interactive UI</div></div>
+        <div class="skill card fade-in"><strong>Three.js</strong><div class="tag" style="margin-top:8px">3D rendering</div></div>
+      </div>
+    </section>
+
+    <!-- Contact -->
+    <section id="contact" aria-labelledby="contact-title">
+      <div class="section-title">
+        <div>
+          <h2 id="contact-title">Contact</h2>
+          <div class="subtitle">Let's create something together.</div>
+        </div>
+      </div>
+
+      <div class="contact-card">
+        <div class="card contact-form" role="form" aria-label="Contact form">
+          <label for="name">Name</label>
+          <input id="name" name="name" placeholder="Your name" required>
+
+          <label for="email" style="margin-top:8px">Email</label>
+          <input id="email" name="email" placeholder="you@domain.com" type="email" required>
+
+          <label for="message" style="margin-top:8px">Message</label>
+          <textarea id="message" rows="6" placeholder="Describe your project..." required></textarea>
+
+          <button id="sendBtn" type="button">Send message</button>
+        </div>
+
+        <aside class="card" style="display:flex; flex-direction:column; gap:8px; justify-content:center;">
+          <div style="font-weight:700; font-size:1.02rem">Reach out</div>
+          <div style="color:var(--muted)">Email: <a href="mailto:hello@example.com">hello@example.com</a></div>
+          <div style="color:var(--muted)">Location: India</div>
+          <div style="margin-top:8px">
+            <div class="subtitle">Available for freelance & full-time roles.</div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal for dynamic project details -->
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-card" id="modal-card">
+      <button class="modal-close" id="modalClose" aria-label="Close details">✕</button>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <script>
+  /*************************************************************************
+   * JavaScript: 3D canvas + dynamic content + interactions
+   * - Three.js cube (drag to rotate, auto-rotate)
+   * - Projects loaded dynamically (simulating fetch)
+   * - Smooth scrolling nav + lazy loading on intersection
+   *************************************************************************/
+
+  // ---------- Helper utilities ----------
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  // Smooth scroll for nav links
+  document.querySelectorAll('a[data-scroll], button[data-scroll]').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      const targetId = el.getAttribute('href') || el.dataset.target;
+      if (!targetId) return;
+      const target = document.querySelector(targetId);
+      if (target) target.scrollIntoView({behavior: 'smooth', block: 'start'});
+    });
+  });
+
+  // ---------- 3D Scene (Three.js) ----------
+  (function initThree(){
+    // Basic safety/feature detect
+    if (!window.THREE) {
+      console.warn('Three.js not loaded. 3D preview disabled.');
+      $('#three-canvas').style.display = 'none';
+      return;
+    }
+
+    const canvas = $('#three-canvas');
+    const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+    renderer.setPixelRatio(window.devicePixelRatio ? Math.min(devicePixelRatio, 2) : 1);
+    renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+
+    const scene = new THREE.Scene();
+
+    // Camera
+    const camera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
+    camera.position.set(2.6, 2.2, 3.3);
+
+    // Lights
+    const keyLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    keyLight.position.set(5,5,5);
+    scene.add(keyLight);
+    const fillLight = new THREE.AmbientLight(0xffffff, 0.25);
+    scene.add(fillLight);
+
+    // Create a cube with different face colors and subtle bevel look
+    const geometry = new THREE.BoxGeometry(1.6,1.6,1.6);
+    const materials = [
+      new THREE.MeshStandardMaterial({color: 0x7c3aed, metalness:0.2, roughness:0.4}),
+      new THREE.MeshStandardMaterial({color: 0x06b6d4, metalness:0.2, roughness:0.4}),
+      new THREE.MeshStandardMaterial({color: 0x60a5fa, metalness:0.2, roughness:0.4}),
+      new THREE.MeshStandardMaterial({color: 0xf97316, metalness:0.2, roughness:0.4}),
+      new THREE.MeshStandardMaterial({color: 0x34d399, metalness:0.2, roughness:0.4}),
+      new THREE.MeshStandardMaterial({color: 0xf472b6, metalness:0.2, roughness:0.4})
+    ];
+    const cube = new THREE.Mesh(geometry, materials);
+    cube.castShadow = true;
+    cube.receiveShadow = true;
+    scene.add(cube);
+
+    // Subtle base plane for feeling of depth
+    const planeGeo = new THREE.PlaneGeometry(12,12);
+    const planeMat = new THREE.MeshStandardMaterial({color:0x071029, metalness:0, roughness:1});
+    const plane = new THREE.Mesh(planeGeo, planeMat);
+    plane.rotation.x = -Math.PI/2;
+    plane.position.y = -1.5;
+    scene.add(plane);
+
+    // Resize handler (debounced)
+    let resizeTimer = null;
+    function resizeRendererToDisplaySize() {
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      if (canvas.width !== width || canvas.height !== height) {
+        renderer.setSize(width, height, false);
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+      }
+    }
+    window.addEventListener('resize', () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(resizeRendererToDisplaySize, 120);
+    });
+
+    // Interaction: drag to rotate
+    let isDragging=false, startX=0, startY=0;
+    let targetRotationX = 0, targetRotationY = 0;
+    let currentRotX = 0, currentRotY = 0;
+
+    function onPointerDown(e){
+      isDragging = true;
+      startX = e.clientX || (e.touches && e.touches[0].clientX);
+      startY = e.clientY || (e.touches && e.touches[0].clientY);
+      canvas.style.cursor = 'grabbing';
+    }
+    function onPointerMove(e){
+      if (!isDragging) return;
+      const x = e.clientX || (e.touches && e.touches[0].clientX);
+      const y = e.clientY || (e.touches && e.touches[0].clientY);
+      const dx = (x - startX) * 0.005;
+      const dy = (y - startY) * 0.005;
+      startX = x; startY = y;
+      targetRotationY += dx;
+      targetRotationX += dy;
+    }
+    function onPointerUp(){ isDragging=false; canvas.style.cursor='grab'; }
+
+    canvas.addEventListener('pointerdown', onPointerDown, {passive:true});
+    window.addEventListener('pointermove', onPointerMove, {passive:true});
+    window.addEventListener('pointerup', onPointerUp, {passive:true});
+    // Touch fallback
+    canvas.addEventListener('touchstart', onPointerDown, {passive:true});
+    canvas.addEventListener('touchmove', onPointerMove, {passive:true});
+    canvas.addEventListener('touchend', onPointerUp, {passive:true});
+
+    // Auto rotate toggle
+    let autoRotate = true;
+    $('#autoRotateToggle').addEventListener('click', (ev) => {
+      autoRotate = !autoRotate;
+      $('#autoRotateToggle').textContent = `Auto Rotate: ${autoRotate ? 'On' : 'Off'}`;
+      $('#autoRotateToggle').setAttribute('aria-pressed', autoRotate ? 'true' : 'false');
+    });
+
+    // Reset button
+    $('#resetBtn').addEventListener('click', () => {
+      targetRotationX = targetRotationY = currentRotX = currentRotY = 0;
+    });
+
+    // Animation loop (requestAnimationFrame)
+    let last = performance.now();
+    function animate(now){
+      const dt = (now - last) / 1000; last = now;
+      // auto rotate slowly if enabled and not dragging
+      if (autoRotate && !isDragging) {
+        targetRotationY += dt * 0.25; // rotate 0.25 rad/s
+      }
+      // ease current rotation towards target
+      currentRotX += (targetRotationX - currentRotX) * 0.12;
+      currentRotY += (targetRotationY - currentRotY) * 0.12;
+
+      // clamp x rotation a bit for better view
+      currentRotX = clamp(currentRotX, -Math.PI/3, Math.PI/3);
+
+      cube.rotation.x = currentRotX;
+      cube.rotation.y = currentRotY;
+
+      resizeRendererToDisplaySize();
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+    // initial settings
+    canvas.style.cursor = 'grab';
+    requestAnimationFrame(animate);
+
+    // Accessibility: keyboard controls to rotate cube
+    document.addEventListener('keydown', (e) => {
+      const step = 0.18;
+      if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
+      if (e.key === 'ArrowLeft') targetRotationY -= step;
+      if (e.key === 'ArrowRight') targetRotationY += step;
+      if (e.key === 'ArrowUp') targetRotationX -= step;
+      if (e.key === 'ArrowDown') targetRotationX += step;
+    });
+
+  })(); // end initThree
+
+  // ---------- Dynamic Projects Loading ----------
+  // Example project data (could be fetched from API). Images are placeholder gradients.
+  const PROJECTS_DATA = [
+    {
+      id: 'p1',
+      title: 'Product Showcase (3D Demo)',
+      description: 'Interactive product page with 3D preview integrated into the shopping experience. Built with Three.js and optimized for AR export.',
+      tags: ['Three.js','3D','UX'],
+      thumb: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450"><rect width="100%" height="100%" fill="%237c3aed"/><text x="50%" y="50%" fill="white" font-family="Arial" font-size="28" text-anchor="middle" dominant-baseline="middle">Product 3D</text></svg>'
+    },
+    {
+      id: 'p2',
+      title: 'Dashboard Visuals',
+      description: 'Fast, accessible data dashboards with animated charts, stateful components, and offline caching.',
+      tags: ['React','D3','Performance'],
+      thumb: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450"><rect width="100%" height="100%" fill="%2306b6d4"/><text x="50%" y="50%" fill="white" font-family="Arial" font-size="28" text-anchor="middle" dominant-baseline="middle">Dashboard</text></svg>'
+    },
+    {
+      id: 'p3',
+      title: 'Marketing Microsite',
+      description: 'Conversion focused landing page with micro-animations, A/B tested hero, and fast LCP performance.',
+      tags: ['HTML','CSS','Accessibility'],
+      thumb: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450"><rect width="100%" height="100%" fill="%23f97316"/><text x="50%" y="50%" fill="white" font-family="Arial" font-size="28" text-anchor="middle" dominant-baseline="middle">Microsite</text></svg>'
+    },
+    {
+      id: 'p4',
+      title: 'Sales Analytics Tool',
+      description: 'Realtime analytics tool for sales teams with collaborative features and exportable reports.',
+      tags: ['Realtime','Node.js','WebSocket'],
+      thumb: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450"><rect width="100%" height="100%" fill="%2334d399"/><text x="50%" y="50%" fill="white" font-family="Arial" font-size="28" text-anchor="middle" dominant-baseline="middle">Analytics</text></svg>'
+    }
+  ];
+
+  // Render projects into grid
+  function renderProjects(projects){
+    const grid = $('#projects-grid');
+    grid.innerHTML = ''; // clear placeholders
+    projects.forEach(p => {
+      const card = document.createElement('article');
+      card.className = 'card';
+      card.setAttribute('tabindex','0');
+      card.setAttribute('role','article');
+      card.setAttribute('aria-labelledby', `t-${p.id}`);
+
+      const thumb = document.createElement('div');
+      thumb.className = 'thumb';
+      // using data-uri images for demo; in production use optimized images with loading="lazy"
+      const img = document.createElement('img');
+      img.setAttribute('alt', p.title + ' thumbnail');
+      img.setAttribute('loading','lazy'); // performance hint
+      img.src = p.thumb;
+      thumb.appendChild(img);
+
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      const title = document.createElement('h3');
+      title.id = `t-${p.id}`;
+      title.textContent = p.title;
+      const openBtn = document.createElement('button');
+      openBtn.className = 'btn';
+      openBtn.textContent = 'Open';
+      openBtn.setAttribute('aria-expanded','false');
+      openBtn.addEventListener('click', () => openProjectDetails(p.id));
+      meta.appendChild(title);
+      meta.appendChild(openBtn);
+
+      const desc = document.createElement('p');
+      desc.style.color = 'var(--muted)';
+      desc.style.margin = '0';
+      desc.textContent = p.description.length > 88 ? p.description.slice(0,88) + '…' : p.description;
+
+      const tagsWrap = document.createElement('div');
+      tagsWrap.className = 'tags';
+      p.tags.forEach(t => {
+        const tk = document.createElement('div');
+        tk.className = 'tag';
+        tk.textContent = t;
+        tagsWrap.appendChild(tk);
+      });
+
+      card.appendChild(thumb);
+      card.appendChild(meta);
+      card.appendChild(desc);
+      card.appendChild(tagsWrap);
+
+      // keyboard accessibility: Enter opens details
+      card.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') openProjectDetails(p.id);
+      });
+
+      grid.appendChild(card);
+    });
+
+    // status
+    $('#projects-status').textContent = `${projects.length} projects loaded`;
+    grid.setAttribute('aria-busy','false');
+  }
+
+  // Simulated fetch (replace with real fetch() in production)
+  function fetchProjects(){
+    const grid = $('#projects-grid');
+    grid.setAttribute('aria-busy','true');
+    $('#projects-status').textContent = 'Loading projects…';
+    return new Promise((resolve) => {
+      setTimeout(() => resolve(PROJECTS_DATA), 650); // small delay for UX
+    });
+  }
+
+  // IntersectionObserver: load projects when section visible
+  const projectsSection = document.getElementById('projects');
+  let projectsLoaded = false;
+  const projectsObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting && !projectsLoaded) {
+        projectsLoaded = true;
+        fetchProjects().then(renderProjects).catch(err => {
+          console.error('Failed to load projects', err);
+          $('#projects-status').textContent = 'Failed to load';
+        });
+        projectsObserver.disconnect();
+      }
+    });
+  }, {root: null, threshold: 0.15});
+  projectsObserver.observe(projectsSection);
+
+  // Also load on clicking "View Projects"
+  $('#viewProjectsBtn').addEventListener('click', async () => {
+    if (projectsLoaded) return;
+    projectsLoaded = true;
+    const data = await fetchProjects();
+    renderProjects(data);
+  });
+
+  // ---------- Modal for project details (dynamic content loading) ----------
+  const modal = $('#modal');
+  const modalContent = $('#modal-content');
+  const modalClose = $('#modalClose');
+
+  function openProjectDetails(projectId){
+    const p = PROJECTS_DATA.find(x => x.id === projectId);
+    if (!p) return;
+    // show loading initially while we "fetch details"
+    modalContent.innerHTML = '<p style="color:var(--muted)">Loading project details…</p>';
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden','false');
+    // trap focus
+    modalClose.focus();
+
+    // Simulate fetching extra details
+    setTimeout(() => {
+      modalContent.innerHTML = `
+        <h2>${p.title}</h2>
+        <div style="display:flex; gap:12px; margin-top:10px; align-items:center;">
+          <img src="${p.thumb}" alt="${p.title} screenshot" style="width:240px; height:135px; object-fit:cover; border-radius:10px; border:1px solid rgba(255,255,255,0.03)">
+          <div style="color:var(--muted)">${p.description}</div>
+        </div>
+        <div style="margin-top:12px"><strong>Tags:</strong> ${p.tags.join(', ')}</div>
+        <div style="margin-top:14px;">
+          <a class="btn" href="#" onclick="event.preventDefault(); alert('Demo: open live site');">Open Live</a>
+          <a class="btn" href="#" style="margin-left:8px" onclick="event.preventDefault(); alert('Demo: view repo');">Repository</a>
+        </div>
+      `;
+    }, 450);
+  }
+
+  function closeModal(){
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden','true');
+    modalContent.innerHTML = '';
+    // return focus sensibly to projects grid
+    const firstCard = document.querySelector('#projects-grid .card');
+    if (firstCard) firstCard.focus();
+  }
+  modalClose.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.classList.contains('show')) closeModal(); });
+
+  // ---------- Contact form (demo: accessible alert) ----------
+  $('#sendBtn').addEventListener('click', () => {
+    const name = $('#name').value.trim();
+    const email = $('#email').value.trim();
+    const message = $('#message').value.trim();
+    if (!name || !email || !message) {
+      alert('Please fill name, email, and message.');
+      return;
+    }
+    // In production: send via fetch to API endpoint
+    // For demo: show confirmation and clear
+    alert('Thanks! Message sent (demo).');
+    $('#name').value=''; $('#email').value=''; $('#message').value='';
+  });
+
+  // ---------- Performance tips: lazy-load images if needed ----------
+  // (Already used loading="lazy" on project images.)
+
+  // ---------- Final accessibility note ----------
+  // Add aria attributes and keyboard handlers where necessary above.
+
+  </script>
+</body>
+</html>
